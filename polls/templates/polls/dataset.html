@@ -75,7 +75,7 @@ scratch. This page gets rid of all links and provides the needed markup only.
         </li>
         {% if df %}
         <li class="nav-item">
-            <a href={% url "index"  %} class="nav-link">
+            <a href={% url "search"  %} class="nav-link">
               <i class="nav-icon fas fa-chart-pie"></i>
               <p>
                 Dashboard
@@ -107,7 +107,7 @@ scratch. This page gets rid of all links and provides the needed markup only.
             </a>
         </li>
         <li class="nav-item">
-            <a href="{% url 'download'%}" class="nav-link">
+            <a href="{% url 'downloadfulldf'%}" class="nav-link">
               <i class="nav-icon fas fa-edit"></i>
               <p>
                 Download Full Dataset
@@ -148,8 +148,8 @@ scratch. This page gets rid of all links and provides the needed markup only.
     <!-- Main content -->
     <section class="content">
       <div class="card" >
-        <div class="card-header">
-          <h3 class="card-title">Dataset</h3>
+        <div class="card-header" style = "background-color: #843fa4;">
+          <h3 class="card-title" style = "color: #fff0f0;">Dataset</h3>
         </div>
         <!-- /.card-header -->
         <div class="card-body">
@@ -197,7 +197,7 @@ scratch. This page gets rid of all links and provides the needed markup only.
      var fields1 = []
      for(i =0; i<data1.length;i++){
          if(data1[i] == "Feedback"||data1[i]=="Processed_Feedback"||data1[i]=="URL"){
-             fields1.push({name: data1[i], type: "text", filtering: true, width: 450})
+             fields1.push({name: data1[i], type: "text", filtering: true, width: 450 })
          }
          else{
              fields1.push({name: data1[i], type: "text", filtering: true})
@@ -216,10 +216,12 @@ scratch. This page gets rid of all links and provides the needed markup only.
 
         sorting: true,
         paging: true,
+        search: true,
 
         data: data2,
 
         fields: fields1
+
     });
   });
 </script>

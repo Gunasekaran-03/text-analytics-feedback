@@ -71,7 +71,7 @@ scratch. This page gets rid of all links and provides the needed markup only.
         </li>
         {% if df %}
         <li class="nav-item">
-            <a href={% url "index"  %} class="nav-link">
+            <a href={% url 'search'%} class="nav-link">
               <i class="nav-icon fas fa-chart-pie"></i>
               <p>
                 Dashboard
@@ -103,7 +103,7 @@ scratch. This page gets rid of all links and provides the needed markup only.
             </a>
         </li>
         <li class="nav-item">
-            <a href="{% url 'download'%}" class="nav-link">
+            <a href="{% url 'downloadfulldf'%}" class="nav-link">
               <i class="nav-icon fas fa-edit"></i>
               <p>
                 Download Full Dataset

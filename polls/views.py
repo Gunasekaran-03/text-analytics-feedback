@@ -26,12 +26,20 @@ stop_words = set(stopwords.words('english'))
 
 
 def index(request):
-    return redirect('/Dashboard/')
+    return redirect('/')
 
 
 
 def downloadDf(request):
     filename = 'analysed_slave.csv'
+    response = HttpResponse(open(filename, 'rb').read(), content_type='text/csv')
+    response['Content-Length'] = os.path.getsize(filename)
+    response['Content-Disposition'] = 'attachment; filename=%s' % 'analysed.csv'
+    return response
+
+
+def downloadfullDf(request):
+    filename = 'analysed_master.csv'
     response = HttpResponse(open(filename, 'rb').read(), content_type='text/csv')
     response['Content-Length'] = os.path.getsize(filename)
     response['Content-Disposition'] = 'attachment; filename=%s' % 'analysed.csv'
@@ -280,8 +288,162 @@ def search_df(request):
 
         context = {'df': data}
         return render(request, 'polls/index.html', context)
-    else:
-        return render(request, 'polls/index.html')
+    elif request.method == "GET":
+        df = pd.read_csv("analysed_master.csv")
+
+        original_df = pd.read_csv("analysed_slave.csv")
+
+        df_Postive = original_df[original_df['Compound_Score'] > 0.2]
+        positive_imagewordcloud = wordcloud_view(df_Postive)
+
+        df_Negative = original_df[original_df['Compound_Score'] < -0.2]
+        negative_imagewordcloud = wordcloud_view(df_Negative)
+
+        rating_1 = original_df.loc[original_df['Star Rating'] == 1]
+        rating_2 = original_df.loc[original_df['Star Rating'] == 2]
+        rating_3 = original_df.loc[original_df['Star Rating'] == 3]
+        rating_4 = original_df.loc[original_df['Star Rating'] == 4]
+        rating_5 = original_df.loc[original_df['Star Rating'] == 5]
+
+        r1_pos = rating_1.loc[rating_1["Feedback_Categories"] == "Positive"]
+        r1_neu = rating_1.loc[rating_1["Feedback_Categories"] == "Neutral"]
+        r1_neg = rating_1.loc[rating_1["Feedback_Categories"] == "Negative"]
+        r2_pos = rating_2.loc[rating_2["Feedback_Categories"] == "Positive"]
+        r2_neu = rating_2.loc[rating_2["Feedback_Categories"] == "Neutral"]
+        r2_neg = rating_2.loc[rating_2["Feedback_Categories"] == "Negative"]
+        r3_pos = rating_3.loc[rating_3["Feedback_Categories"] == "Positive"]
+        r3_neu = rating_3.loc[rating_3["Feedback_Categories"] == "Neutral"]
+        r3_neg = rating_3.loc[rating_3["Feedback_Categories"] == "Negative"]
+        r4_pos = rating_4.loc[rating_4["Feedback_Categories"] == "Positive"]
+        r4_neu = rating_4.loc[rating_4["Feedback_Categories"] == "Neutral"]
+        r4_neg = rating_4.loc[rating_4["Feedback_Categories"] == "Negative"]
+        r5_pos = rating_5.loc[rating_5["Feedback_Categories"] == "Positive"]
+        r5_neu = rating_5.loc[rating_5["Feedback_Categories"] == "Neutral"]
+        r5_neg = rating_5.loc[rating_5["Feedback_Categories"] == "Negative"]
+
+        Rating_list = [[len(r1_pos), len(r2_pos), len(r3_pos), len(r4_pos), len(r5_pos)],
+                       [len(r1_neu), len(r2_neu), len(r3_neu), len(r4_neu), len(r5_neu)],
+                       [len(r1_neg), len(r2_neg), len(r3_neg), len(r4_neg), len(r5_neg)]]
+
+        percent = [sum(Rating_list[0]), sum(Rating_list[1]), sum(Rating_list[2])]
+        percent = list(map(lambda x: (float(x) / sum(percent)) * 100 if x != 0 else x, percent))
+        for i in range(0, len(percent)):
+            percent[i] = round(percent[i], 2)
+        percent.append(100)
+
+        Rating_list.append(percent)
+
+        count = [sum(Rating_list[0]), sum(Rating_list[1]), sum(Rating_list[2]),
+                 sum(Rating_list[0]) + sum(Rating_list[1]) + sum(Rating_list[2])]
+        Rating_list.append(count)
+
+        original_df_Postive = original_df[original_df['Compound_Score'] > 0.2]
+
+        freq = freq_words(original_df_Postive['Processed_Feedback'], 10)
+        freq_w = list(freq['word'])
+        freq_c = list(freq['count'])
+
+        freq_data = []
+        count_data = []
+        if len(freq_w) <= 10:
+            for i in freq_w:
+                freq_data.append(i)
+            Rating_list.append(freq_data)
+            for i in freq_c:
+                count_data.append(i)
+            Rating_list.append(count_data)
+        else:
+            Rating_list.append(
+                [freq['word'][0], freq['word'][1], freq['word'][2], freq['word'][3], freq['word'][4], freq['word'][5],
+                 freq['word'][6], freq['word'][7], freq['word'][8], freq['word'][9]])
+            Rating_list.append(
+                [freq['count'][0], freq['count'][1], freq['count'][2], freq['count'][3], freq['count'][4],
+                 freq['count'][5], freq['count'][6], freq['count'][7], freq['count'][8], freq['count'][9]])
+
+        states = pd.crosstab(df.State, df.Feedback_Categories).reset_index()
+        states = pd.DataFrame(states)
+
+        states_negative = states.iloc[states['Negative'].idxmax()]
+        states_positive = states.iloc[states['Positive'].idxmax()]
+        states_neutral = states.iloc[states['Neutral'].idxmax()]
+
+        states_negative.drop(['Positive', 'Neutral'], axis=0, inplace=True)
+        json_records = states_negative.to_json(orient='records')
+        states_negative = json.loads(json_records)
+
+        states_positive.drop(['Negative', 'Neutral'], axis=0, inplace=True)
+        json_records = states_positive.to_json(orient='records')
+        states_positive = json.loads(json_records)
+
+        states_neutral.drop(['Positive', 'Negative'], axis=0, inplace=True)
+        json_records = states_neutral.to_json(orient='records')
+        states_neutral = json.loads(json_records)
+
+        state_data = [
+            [states_positive[0], states_positive[1], 'Positive'],
+            [states_negative[0], states_negative[1], 'Negative'],
+            [states_neutral[0], states_neutral[1], 'Neutral'],
+        ]
+
+        city = pd.crosstab(df.City, df.Feedback_Categories).reset_index()
+        city = pd.DataFrame(city)
+
+        city_negative = city.iloc[city['Negative'].idxmax()]
+        city_positive = city.iloc[city['Positive'].idxmax()]
+        city_neutral = city.iloc[city['Neutral'].idxmax()]
+
+        city_negative.drop(['Positive', 'Neutral'], axis=0, inplace=True)
+        json_records = city_negative.to_json(orient='records')
+        city_negative = json.loads(json_records)
+
+        city_positive.drop(['Negative', 'Neutral'], axis=0, inplace=True)
+        json_records = city_positive.to_json(orient='records')
+        city_positive = json.loads(json_records)
+
+        city_neutral.drop(['Positive', 'Negative'], axis=0, inplace=True)
+        json_records = city_neutral.to_json(orient='records')
+        city_neutral = json.loads(json_records)
+
+        city_data = [
+            [city_positive[0], city_positive[1], 'Positive'],
+            [city_negative[0], city_negative[1], 'Negative'],
+            [city_neutral[0], city_neutral[1], 'Neutral'],
+        ]
+
+        states_lst = df["State"].unique()
+        states_lst = list(pd.Series(states_lst))
+
+        cities_lst = df["City"].unique()
+        cities_lst = list(pd.Series(cities_lst))
+
+        category_lst = df["Feedback_Categories"].unique()
+        category_lst = list(pd.Series(category_lst))
+
+        rating_lst = df['Star Rating'].unique()
+        rating_lst = list(pd.Series(rating_lst))
+
+        data = {
+            'Total_percent': percent,
+            'Total_count': count,
+            'positive_cloud': positive_imagewordcloud,
+            'negative_cloud': negative_imagewordcloud,
+            'positive': Rating_list[0],
+            'neutral': Rating_list[1],
+            'negative': Rating_list[2],
+            'percent': Rating_list[3],
+            'count': Rating_list[4],
+            'positive_word': Rating_list[5],
+            'positive_count': Rating_list[6],
+            'state_data': state_data,
+            'city_data': city_data,
+            'state_lst': states_lst,
+            'cities_lst': cities_lst,
+            'rating_lst': rating_lst,
+            'category_lst': category_lst
+        }
+
+        context = {'df': data}
+        return render(request, 'polls/index.html', context)
 
 
 def process_df(request):
